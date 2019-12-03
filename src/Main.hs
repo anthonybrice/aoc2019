@@ -1,6 +1,9 @@
 module Main where
 
 import System.Environment
+import Data.Maybe (fromJust)
+import Data.List (find)
+import Data.List.Index (setAt)
 import Data.List.Split (splitOn)
 
 main :: IO ()
@@ -20,13 +23,8 @@ d2p2 = do
   putStrLn $ show $ 100 * m + n
 
 findNums :: [Int] -> Int -> Int -> (Int, Int)
-findNums xs m n =
-  if isNums xs m n
-  then (m, n)
-  else
-    case n of
-      99 -> findNums xs (m+1) 0
-      _ -> findNums xs m (n+1)
+findNums xs = fromJust $
+  find (\(m, n) -> isNums xs m n) ((,) <$> [0..99] <*> [0..99])
 
 isNums :: [Int] -> Int -> Int -> Bool
 isNums l@(x:xs) m n =
@@ -44,14 +42,8 @@ compute :: [Int] -> Int -> [Int]
 compute xs i =
   case xs!!i of
     99 -> xs
-    1 -> compute (replaceNth (xs!!(i+3)) ((xs!!(xs!!(i+1))) + (xs!!(xs!!(i+2)))) xs) (i+4)
-    2 -> compute (replaceNth (xs!!(i+3)) ((xs!!(xs!!(i+1))) * (xs!!(xs!!(i+2)))) xs) (i+4)
-
-replaceNth :: Int -> a -> [a] -> [a]
-replaceNth _ _ [] = []
-replaceNth n newVal (x:xs)
-  | n == 0 = newVal:xs
-  | otherwise = x:replaceNth (n-1) newVal xs
+    1 -> compute (setAt (xs!!(i+3)) ((xs!!(xs!!(i+1))) + (xs!!(xs!!(i+2)))) xs) (i+4)
+    2 -> compute (setAt (xs!!(i+3)) ((xs!!(xs!!(i+1))) * (xs!!(xs!!(i+2)))) xs) (i+4)
 
 d1p1 :: IO ()
 d1p1 = do
