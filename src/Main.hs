@@ -44,8 +44,7 @@ compute' i iocode = do
   --putStrLn $ "Code: " ++ (show $ take 10 $ drop i code)
   let ds = fillOp $ code!!i
       getValue m p = if m == 0 then code!!p else p
-      doOp b v1 v2 v3 = do
-        return $ setAt v3 (v1 `b` v2) code
+      doOp b v1 v2 v3 = return $ setAt v3 (v1 `b` v2) code
       doInput i' = do
         putStrLn "Provide input:"
         v <- read <$> getLine :: IO Int
