@@ -20,14 +20,54 @@ main = do
     "d3p2" -> d3p2
     "d4p1" -> d4p1
     "d4p2" -> d4p2
+    "d5p1" -> d5p1
+
+d5p1 :: IO ()
+d5p1 = do
+  rawInput <- readFile "input5"
+  let input = map read $ splitOn "," rawInput :: [Int]
+  computed <- compute' 0 $ return input
+  putStrLn $ show $ computed!!0
+
+
+compute' :: Int -> IO [Int] -> IO [Int]
+compute' i iocode = do
+  code <- iocode
+  let ds = fillOp $ code!!i
+      getValue m p = if m == 0 then code!!p else p
+      doOp b v1 v2 v3 = return $ setAt (code!!v3) (v1 `b` v2) code
+      doInput i' = do
+        v <- read <$> getLine :: IO Int
+        return $ setAt i' v code
+      doOutput v = do
+        putStrLn $ show v
+        return $ code
+  case ds of
+    (_:_:_:9:9:[]) -> return code
+    (m3:m2:m1:0:1:[]) -> compute' (i+4)
+                         $ doOp (+) (getValue m1 $ code!!(i+1))
+                         (getValue m2 $ code!!(i+2))
+                         (getValue m3 $ code!!(i+3))
+    (m3:m2:m1:0:2:[]) -> compute' (i+4)
+                         $ doOp (*) (getValue m1 $ code!!(i+1))
+                         (getValue m2 $ code!!(i+2))
+                         (getValue m3 $ code!!(i+3))
+    (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput (getValue m1 $ code!!(i+1))
+    (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput (getValue m1 $ code!!(i+1))
+
+
+fillOp :: Int -> [Int]
+fillOp x =
+  let pad y = if length y < 5 then pad (0:y) else y
+  in pad $ digits 10 x
 
 d4p2 :: IO ()
 d4p2 = do
   let ns = [152085..670283]
-      containsUniquePair n =
+      containsPair n =
         let ns = digits 10 n
         in not . null . filter (\x -> length x == 2) $ group ns
-      pws = filter containsUniquePair $ filter isAscending ns
+      pws = filter containsPair $ filter isAscending ns
   putStrLn . show $ length pws
 
 isAscending n =
