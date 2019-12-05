@@ -65,21 +65,21 @@ compute' i iocode = do
     (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput $ code!!(i+1)
     (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
     (_:m2:m1:0:5:[]) ->
-      if (getValue m1 $ code!!(i+1)) /= 0
-      then compute' (getValue m2 $ code!!(i+2)) $ return code
-      else compute' (i+3) $ return code
+      let b = (getValue m1 $ code!!(i+1)) /= 0
+      in compute' (if b then getValue m2 $ code!!(i+2) else i+3)
+         $ return code
     (_:m2:m1:0:6:[]) ->
-      if (getValue m1 $ code!!(i+1)) == 0
-      then compute' (getValue m2 $ code!!(i+2)) $ return code
-      else compute' (i+3) $ return code
+      let b = (getValue m1 $ code!!(i+1)) == 0
+      in compute' (if b then getValue m2 $ code!!(i+2) else i+3)
+         $ return code
     (_:m2:m1:0:7:[]) ->
-      if (getValue m1 $ code!!(i+1)) < (getValue m2 $ code!!(i+2))
-      then compute' (i+4) $ return $ setAt (code!!(i+3)) 1 code
-      else compute' (i+4) $ return $ setAt (code!!(i+3)) 0 code
+      let b = (getValue m1 $ code!!(i+1)) < (getValue m2 $ code!!(i+2))
+      in compute' (i+4) $
+         return $ setAt (code!!(i+3)) (if b then 1 else 0) code
     (_:m2:m1:0:8:[]) ->
-      if (getValue m1 $ code!!(i+1)) == (getValue m2 $ code!!(i+2))
-      then compute' (i+4) $ return $ setAt (code!!(i+3)) 1 code
-      else compute' (i+4) $ return $ setAt (code!!(i+3)) 0 code
+      let b = (getValue m1 $ code!!(i+1)) == (getValue m2 $ code!!(i+2))
+      in compute' (i+4) $
+         return $ setAt (code!!(i+3)) (if b then 1 else 0) code
 
 fillOp :: Int -> [Int]
 fillOp x =
