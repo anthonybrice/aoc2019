@@ -25,34 +25,39 @@ main = do
 d5p1 :: IO ()
 d5p1 = do
   rawInput <- readFile "input5"
-  let input = map read $ splitOn "," rawInput :: [Int]
+  let input = (map read $ splitOn "," rawInput :: [Int]) ++ repeat 0
   computed <- compute' 0 $ return input
   putStrLn $ show $ computed!!0
 
 
 compute' :: Int -> IO [Int] -> IO [Int]
 compute' i iocode = do
+  putStrLn $ "index: " ++ show i
   code <- iocode
+  putStrLn $ "code: " ++ show (take 10 code)
   let ds = fillOp $ code!!i
       getValue m p = if m == 0 then code!!p else p
-      doOp b v1 v2 v3 = return $ setAt (code!!v3) (v1 `b` v2) code
+      doOp b v1 v2 v3 = do
+        putStrLn $ "Doing op: " ++ show v1 ++ " " ++ show v2 ++ " " ++ show v3
+        return $ setAt (code!!v3) (v1 `b` v2) code
       doInput i' = do
+        putStrLn "Provide input:"
         v <- read <$> getLine :: IO Int
         return $ setAt i' v code
       doOutput v = do
-        putStrLn $ show v
+        putStrLn $ "Output: " ++ show v
         return $ code
   case ds of
     (_:_:_:9:9:[]) -> return code
     (m3:m2:m1:0:1:[]) -> compute' (i+4)
                          $ doOp (+) (getValue m1 $ code!!(i+1))
                          (getValue m2 $ code!!(i+2))
-                         (getValue m3 $ code!!(i+3))
+                         (code!!(i+3))
     (m3:m2:m1:0:2:[]) -> compute' (i+4)
                          $ doOp (*) (getValue m1 $ code!!(i+1))
                          (getValue m2 $ code!!(i+2))
                          (getValue m3 $ code!!(i+3))
-    (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput (getValue m1 $ code!!(i+1))
+    (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput $ getValue m1 $ code!!(i+1)
     (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput (getValue m1 $ code!!(i+1))
 
 
