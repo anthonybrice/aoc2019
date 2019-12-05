@@ -1,6 +1,6 @@
 module Main where
 
-import System.Environment
+import System.Environment (getArgs)
 import Data.Digits (digits)
 import Data.Maybe (fromJust)
 import Data.List (elemIndex, find, group, mapAccumL)
@@ -10,8 +10,8 @@ import Data.Set (intersection, fromList, toList)
 
 main :: IO ()
 main = do
-  args <- getArgs
-  case args!!0 of
+  arg:_ <- getArgs
+  case arg of
     "d1p1" -> d1p1
     "d1p2" -> d1p2
     "d2p1" -> d2p1
@@ -26,34 +26,26 @@ d4p2 = do
   let ns = [152085..670283]
       containsUniquePair n =
         let ns = digits 10 n
-        in not $ null $ filter (\x -> length x == 2) $ group ns
-      isAscending n =
-        let ns = digits 10 n
-        in fst $ foldl
-           (\(b, p) n -> if not b || p > n then (False, n) else (True, n))
-           (True, head ns)
-           (tail ns)
+        in not . null . filter (\x -> length x == 2) $ group ns
       pws = filter containsUniquePair $ filter isAscending ns
-  putStrLn $ show $ length pws
+  putStrLn . show $ length pws
 
+isAscending n =
+  let d:ds = digits 10 n
+      f p (x:xs) = if p > x then False else f x xs
+      f _ [] = True
+  in f d ds
 
 d4p1 :: IO ()
 d4p1 = do
   let ns = [152085..670283]
       isTwoAdjacentSame n =
-        let ns = digits 10 n
-        in fst $ foldl
-           (\(b, p) n -> if b || p == n then (True, n) else (False, n))
-           (False, head ns)
-           (tail ns)
-      isAscending n =
-        let ns = digits 10 n
-        in fst $ foldl
-           (\(b, p) n -> if not b || p > n then (False, n) else (True, n))
-           (True, head ns)
-           (tail ns)
+        let d:ds = digits 10 n
+            f p (x:xs) = if p == x then True else f x xs
+            f _ [] = False
+        in f d ds
       pws = filter isAscending $ filter isTwoAdjacentSame ns
-  putStrLn $ show $ length pws
+  putStrLn . show $ length pws
 
 d3p2 :: IO ()
 d3p2 = do
@@ -62,16 +54,15 @@ d3p2 = do
       [wire1, wire2] = map makePath paths
       crossings = toList $ fromList wire1 `intersection` fromList wire2
       d = 2 + (foldl1 min
-               $ map (\p -> fromJust (elemIndex p wire1)
-                       + fromJust (elemIndex p wire2)) crossings)
+                $ map (\p -> fromJust (elemIndex p wire1)
+                        + fromJust (elemIndex p wire2)) crossings)
   putStrLn $ show d
 
 d3p1 :: IO ()
 d3p1 = do
   rawInput <- readFile "input3"
   let paths = map (splitOn ",") $ lines rawInput
-      wire1 = makePath (paths!!0)
-      wire2 = makePath (paths!!1)
+      [wire1, wire2] = map makePath paths
       crossings = toList $ fromList wire1 `intersection` fromList wire2
       d = foldl1 min $ map (\(x,y) -> abs x + abs y) crossings
   putStrLn $ show d
@@ -85,9 +76,9 @@ makePath moves =
           'L' -> reverse [(x',y) | x' <- [(x-n)..(x-1)]]
           'U' -> [(x,y') | y' <- [(y+1)..(y+n)]]
           'D' -> reverse [(x,y') | y' <- [(y-n)..(y-1)]]
-  in (concat . snd $ mapAccumL
+  in concat . snd $ mapAccumL
        (\p m -> let l = doMove p m in (last l, l))
-       (0,0) moves)
+       (0,0) moves
 
 d2p2 :: IO ()
 d2p2 = do
@@ -122,10 +113,11 @@ compute xs i =
     1 -> doOp (+)
     2 -> doOp (*)
   where
-    doOp b =
-      compute (setAt (xs!!(i+3))
-               ((xs!!(xs!!(i+1)))
-                `b` (xs!!(xs!!(i+2)))) xs) (i+4)
+    doOp b = compute (setAt
+                       (xs!!(i+3))
+                       ((xs!!(xs!!(i+1)))
+                         `b` (xs!!(xs!!(i+2))))
+                       xs) (i+4)
 
 d1p1 :: IO ()
 d1p1 = do
