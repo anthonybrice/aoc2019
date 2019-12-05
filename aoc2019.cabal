@@ -20,3 +20,5 @@ executable aoc2019
   build-depends:       base >= 4.7 && < 5
                      , split
                      , ilist
+                     , containers
+                     , digits
