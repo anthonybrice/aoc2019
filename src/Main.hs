@@ -51,17 +51,17 @@ compute' i iocode = do
         return $ setAt i' v code
       doOutput v = do
         putStrLn $ "Output: " ++ show v
-        return $ code
+        return code
   case ds of
     (_:_:_:9:9:[]) -> return code
     (_:m2:m1:0:1:[]) -> compute' (i+4)
-                         $ doOp (+) (getValue m1 $ code!!(i+1))
-                         (getValue m2 $ code!!(i+2))
-                         (code!!(i+3))
+                        $ doOp (+) (getValue m1 $ code!!(i+1))
+                        (getValue m2 $ code!!(i+2))
+                        (code!!(i+3))
     (_:m2:m1:0:2:[]) -> compute' (i+4)
-                         $ doOp (*) (getValue m1 $ code!!(i+1))
-                         (getValue m2 $ code!!(i+2))
-                         (code!!(i+3))
+                        $ doOp (*) (getValue m1 $ code!!(i+1))
+                        (getValue m2 $ code!!(i+2))
+                        (code!!(i+3))
     (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput $ code!!(i+1)
     (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
     (_:m2:m1:0:5:[]) ->
