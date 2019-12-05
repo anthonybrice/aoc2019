@@ -22,6 +22,13 @@ main = do
     "d4p2" -> d4p2
     "d5p1" -> d5p1
 
+d5p2 :: IO ()
+d5p2 = do
+  rawInput <- readFile "input5"
+  let input = map read $ splitOn "," rawInput :: [Int]
+  computed <- compute' 0 $ return input
+  putStrLn ""
+
 d5p1 :: IO ()
 d5p1 = do
   rawInput <- readFile "input5"
@@ -32,6 +39,8 @@ d5p1 = do
 compute' :: Int -> IO [Int] -> IO [Int]
 compute' i iocode = do
   code <- iocode
+  --putStrLn $ "Index: " ++ show i
+  --putStrLn $ "Code: " ++ (show $ take 10 $ drop i code)
   let ds = fillOp $ code!!i
       getValue m p = if m == 0 then code!!p else p
       doOp b v1 v2 v3 = do
@@ -45,17 +54,32 @@ compute' i iocode = do
         return $ code
   case ds of
     (_:_:_:9:9:[]) -> return code
-    (m3:m2:m1:0:1:[]) -> compute' (i+4)
+    (_:m2:m1:0:1:[]) -> compute' (i+4)
                          $ doOp (+) (getValue m1 $ code!!(i+1))
                          (getValue m2 $ code!!(i+2))
                          (code!!(i+3))
-    (m3:m2:m1:0:2:[]) -> compute' (i+4)
+    (_:m2:m1:0:2:[]) -> compute' (i+4)
                          $ doOp (*) (getValue m1 $ code!!(i+1))
                          (getValue m2 $ code!!(i+2))
                          (code!!(i+3))
     (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput $ code!!(i+1)
     (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
-
+    (_:m2:m1:0:5:[]) ->
+      if (getValue m1 $ code!!(i+1)) /= 0
+      then compute' (getValue m2 $ code!!(i+2)) $ return code
+      else compute' (i+3) $ return code
+    (_:m2:m1:0:6:[]) ->
+      if (getValue m1 $ code!!(i+1)) == 0
+      then compute' (getValue m2 $ code!!(i+2)) $ return code
+      else compute' (i+3) $ return code
+    (_:m2:m1:0:7:[]) ->
+      if (getValue m1 $ code!!(i+1)) < (getValue m2 $ code!!(i+2))
+      then compute' (i+4) $ return $ setAt (code!!(i+3)) 1 code
+      else compute' (i+4) $ return $ setAt (code!!(i+3)) 0 code
+    (_:m2:m1:0:8:[]) ->
+      if (getValue m1 $ code!!(i+1)) == (getValue m2 $ code!!(i+2))
+      then compute' (i+4) $ return $ setAt (code!!(i+3)) 1 code
+      else compute' (i+4) $ return $ setAt (code!!(i+3)) 0 code
 
 fillOp :: Int -> [Int]
 fillOp x =
