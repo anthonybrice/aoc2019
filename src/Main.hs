@@ -26,8 +26,7 @@ d4p2 = do
   let ns = [152085..670283]
       containsUniquePair n =
         let ns = digits 10 n
-            adjacentSames = group ns
-        in not $ null $ filter (\x -> length x == 2) adjacentSames
+        in not $ null $ filter (\x -> length x == 2) $ group ns
       isAscending n =
         let ns = digits 10 n
         in fst $ foldl
