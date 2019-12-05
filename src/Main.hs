@@ -21,6 +21,7 @@ main = do
     "d4p1" -> d4p1
     "d4p2" -> d4p2
     "d5p1" -> d5p1
+    "d5p2" -> d5p2
 
 d5p2 :: IO ()
 d5p2 = do
