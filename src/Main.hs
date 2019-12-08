@@ -1,12 +1,17 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 import System.Environment (getArgs)
 import Data.Digits (digits)
-import Data.Maybe (fromJust)
-import Data.List (elemIndex, find, group, mapAccumL)
-import Data.List.Index (setAt)
+import Data.Graph (graphFromEdges, Vertex)
+import Data.Maybe (fromJust, mapMaybe)
+import Data.List (elemIndex, find, group, mapAccumL, foldl')
+import Data.List.Index (setAt, indexed, deleteAt, ifoldl')
 import Data.List.Split (splitOn)
 import Data.Set (intersection, fromList, toList)
+
+import Debug.Trace
 
 main :: IO ()
 main = do
@@ -22,6 +27,54 @@ main = do
     "d4p2" -> d4p2
     "d5p1" -> d5p1
     "d5p2" -> d5p2
+    "d6p1" -> d6p1
+
+makeAdjacencyList :: String -> (String, String, [String])
+makeAdjacencyList s =
+  let [p, c] = splitOn ")" s
+  in (p, p, [c])
+
+fixDups
+  :: [(String, String, [String])]
+  -> [(String, String, [String])]
+  -> [(String, String, [String])]
+fixDups ys [] = ys
+fixDups ys ((n, k, as):xs) =
+  let (is, adjs) =
+        unzip $ ifoldl'
+        (\acc i (m, _, adj) -> if n == m then (i, adj!!0):acc else acc)
+        [] xs
+      xs' = ifoldl'
+        (\acc i e -> if elem i is then acc else e:acc)
+        [] xs
+  in fixDups ((n, k, as ++ adjs) : ys) xs'
+
+fixLeaves
+  :: [(String, String, [String])]
+  -> [(String, String, [String])]
+  -> [(String, String, [String])]
+  -> [(String, String, [String])]
+fixLeaves acc [] _ = acc
+fixLeaves acc (p@(n, k, as):xs) ys =
+  let fst (a,_,_) = a
+      as' = foldl' (\acc a -> if elem a (map fst ys) then acc else a:acc)
+            [] as
+  in fixLeaves (p : map (\a -> (a, a, [])) as' ++ acc) xs ys
+
+d6p1 :: IO ()
+d6p1 = do
+  input <- lines <$> readFile "input6"
+  let is = fixDups [] $ map makeAdjacencyList input
+      (g, fn, fv) =
+        graphFromEdges
+        $ fixLeaves [] is is
+      sumOrbits :: Int -> Vertex -> Int
+      sumOrbits d v =
+        let (_,_,as) = fn v
+            adjs = map (sumOrbits (d+1)) $ mapMaybe fv as
+        in d + sum adjs
+  --let edges = makeEdges input
+  putStrLn $ show $ sumOrbits 0 $ fromJust $ fv "COM"
 
 d5p2 :: IO ()
 d5p2 = do
