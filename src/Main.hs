@@ -1,17 +1,16 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import System.Environment (getArgs)
+import Data.Char (digitToInt)
 import Data.Digits (digits)
 import Data.Graph (dfs, graphFromEdges, Vertex)
-import Data.Maybe (fromJust, mapMaybe)
-import Data.List (elemIndex, find, group, mapAccumL, foldl', foldl1'
+import Data.List (elemIndex, group, mapAccumL, foldl'
                  , permutations)
-import Data.List.Index (setAt, indexed, deleteAt, ifoldl', ifind)
-import Data.List.Split (splitOn)
+import Data.List.Index (setAt, ifoldl', ifind)
+import Data.List.Split (splitOn, chunksOf)
+import Data.Maybe (fromJust, mapMaybe)
 import Data.Set (intersection, fromList, toList)
 import Data.Tree (Tree(..))
+import System.Environment (getArgs)
 
 import Debug.Trace
 
@@ -32,10 +31,30 @@ main = do
     "d6p1" -> d6p1
     "d7p1" -> d7p1
     "d7p2" -> d7p2
+    "d8p1" -> d8p1
+    "d8p2" -> d8p2
+    _ -> error "bad arg"
+
+d8p2 :: IO ()
+d8p2 = do
+  undefined
+
+d8p1 :: IO ()
+d8p1 = do
+  is <- map digitToInt <$> readFile "input8"
+  let (w, h) = (25,6)
+      is' = chunksOf (w*h) is
+      count n = length . filter ((==) n)
+      is'' = map (\xs -> (count 0 xs, xs)) is'
+      least0s =
+        snd $ foldl' (\acc@(n, _) (m, xs) -> if m < n then (m, xs) else acc)
+        (head is'') (tail is'')
+      out = count 1 least0s * count 2 least0s
+  putStrLn $ show out
 
 d7p2 :: IO ()
 d7p2 = do
-  is <- map read <$> splitOn "," <$> readFile "input7" :: IO [Int]
+  is <- map read <$> splitOn "," <$> readFile "input7"
   let ampA i j k l m = compute'' 0 (i:0:ampE i j k l m) [] is
       ampD i j k l m = compute'' 0 (l:ampC i j k l m) [] is
       ampC i j k l m = compute'' 0 (k:ampB i j k l m) [] is
@@ -46,7 +65,7 @@ d7p2 = do
 
 d7p1 :: IO ()
 d7p1 = do
-  is <- map read <$> splitOn "," <$> readFile "input7" :: IO [Int]
+  is <- map read <$> splitOn "," <$> readFile "input7"
   let ampA i = compute'' 0 (i:repeat 0) [] is
       ampB i j = compute'' 0 (i:ampA j) [] is
       ampC i j k = compute'' 0 (i:ampB j k) [] is
@@ -57,13 +76,13 @@ d7p1 = do
 
 d5p1' :: IO ()
 d5p1' = do
-  is <- map read <$> splitOn "," <$> readFile "input5" :: IO [Int]
+  is <- map read <$> splitOn "," <$> readFile "input5"
   let computed = compute'' 0 [1] [] is
   putStrLn $ show computed
 
 d5p2' :: IO ()
 d5p2' = do
-  is <- map read <$> splitOn "," <$> readFile "input5" :: IO [Int]
+  is <- map read <$> splitOn "," <$> readFile "input5"
   let computed = compute'' 0 [5] [] is
   putStrLn $ show computed
 
@@ -83,7 +102,7 @@ compute'' i input output code =
                         $ doOp (*) (getv m1 $ code!!(i+1))
                         (getv m2 $ code!!(i+2))
                         (code!!(i+3))
-    (_:_:m1:0:3:[]) ->
+    (_:_:_:0:3:[]) ->
       compute'' (i+2) (tail input) output $ doInput $ code!!(i+1)
     (_:_:m1:0:4:[]) ->
       compute'' (i+2) input ((getv m1 $ code!!(i+1)) : output) code
@@ -103,6 +122,7 @@ compute'' i input output code =
       let b = (getv m1 $ code!!(i+1)) == (getv m2 $ code!!(i+2))
       in compute'' (i+4) input output
          $ setAt (code!!(i+3)) (if b then 1 else 0) code
+    _ -> error "bad code"
 
 makeAdjacencyList :: String -> (String, String, [String])
 makeAdjacencyList s =
@@ -130,9 +150,10 @@ fixLeaves
   -> [(String, String, [String])]
   -> [(String, String, [String])]
 fixLeaves acc [] _ = acc
-fixLeaves acc (p@(n, k, as):xs) ys =
-  let fst (a,_,_) = a
-      as' = foldl' (\acc a -> if elem a (map fst ys) then acc else a:acc)
+fixLeaves acc (p@(_,_,as):xs) ys =
+  let fst' (a,_,_) = a
+      as' = foldl' (\acc' a ->
+                      if elem a (map fst' ys) then acc' else a:acc')
             [] as
   in fixLeaves (p : map (\a -> (a, a, [])) as' ++ acc) xs ys
 
@@ -141,7 +162,7 @@ fixAdjacencies
   -> [(String, String, [String])]
   -> [(String, String, [String])]
 fixAdjacencies acc [] = acc
-fixAdjacencies acc (p@(n, k, as):xs) =
+fixAdjacencies acc ((n,_,as):xs) =
   let
     fst' (a,_,_) = a; snd' (_,b,_) = b; thd (_,_,c) = c
     f a = let (i, x) = fromJust $ ifind (\_ s -> fst' s == a) acc
@@ -149,11 +170,10 @@ fixAdjacencies acc (p@(n, k, as):xs) =
           in (i, u)
     (is, ys) = unzip $ map f as
     acc' = fst $ ifoldl'
-           (\(zs, j) i a -> if i `elem` is
+           (\(zs, j) i _ -> if i `elem` is
                             then (setAt i (ys!!j) zs, j+1)
                             else (zs, j)) (acc, 0) acc
   in fixAdjacencies acc' xs
-
 
 d6p2 :: IO ()
 d6p2 = do
@@ -161,7 +181,7 @@ d6p2 = do
   let is = fixDups [] $ map makeAdjacencyList input
       is' = fixLeaves [] is is
       is'' = fixAdjacencies is' is'
-      (g, nfv, vfk) = graphFromEdges is''
+      (g, _, vfk) = graphFromEdges is''
       t = head $ dfs g [fromJust $ vfk "YOU"]
       san = fromJust $ vfk "SAN"
       findSanta :: [(Int, Int)] -> Tree Int -> [(Int, Int)]
@@ -175,7 +195,7 @@ d6p1 :: IO ()
 d6p1 = do
   input <- lines <$> readFile "input6"
   let is = fixDups [] $ map makeAdjacencyList input
-      (g, fn, fv) =
+      (_, fn, fv) =
         graphFromEdges
         $ fixLeaves [] is is
       sumOrbits :: Int -> Vertex -> Int
@@ -189,14 +209,14 @@ d5p2 :: IO ()
 d5p2 = do
   rawInput <- readFile "input5"
   let input = map read $ splitOn "," rawInput :: [Int]
-  computed <- compute' 0 $ return input
+  _ <- compute' 0 $ return input
   putStrLn ""
 
 d5p1 :: IO ()
 d5p1 = do
   rawInput <- readFile "input5"
   let input = map read $ splitOn "," rawInput :: [Int]
-  computed <- compute' 0 $ return input
+  _ <- compute' 0 $ return input
   putStrLn ""
 
 compute' :: Int -> IO [Int] -> IO [Int]
@@ -224,7 +244,7 @@ compute' i iocode = do
                         $ doOp (*) (getValue m1 $ code!!(i+1))
                         (getValue m2 $ code!!(i+2))
                         (code!!(i+3))
-    (_:_:m1:0:3:[]) ->
+    (_:_:_:0:3:[]) ->
       compute' (i+2) $ doInput $ code!!(i+1)
     (_:_:m1:0:4:[]) ->
       compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
@@ -244,6 +264,7 @@ compute' i iocode = do
       let b = (getValue m1 $ code!!(i+1)) == (getValue m2 $ code!!(i+2))
       in compute' (i+4) $
          return $ setAt (code!!(i+3)) (if b then 1 else 0) code
+    _ -> error "bad code"
 
 fillOp :: Int -> [Int]
 fillOp x =
@@ -254,11 +275,12 @@ d4p2 :: IO ()
 d4p2 = do
   let ns = [152085..670283]
       containsPair n =
-        let ns = digits 10 n
-        in not . null . filter (\x -> length x == 2) $ group ns
+        let ns' = digits 10 n
+        in not . null . filter (\x -> length x == 2) $ group ns'
       pws = filter containsPair $ filter isAscending ns
   putStrLn . show $ length pws
 
+isAscending :: Int -> Bool
 isAscending n =
   let d:ds = digits 10 n
       f p (x:xs) = if p > x then False else f x xs
@@ -298,13 +320,15 @@ d3p1 = do
 
 makePath :: [String] -> [(Integer, Integer)]
 makePath moves =
-  let doMove (x,y) (d:m) =
+  let doMove _ [] = error ""
+      doMove (x,y) (d:m) =
         let n = read m :: Integer
         in case d of
           'R' -> [(x',y) | x' <- [(x+1)..(x+n)]]
           'L' -> reverse [(x',y) | x' <- [(x-n)..(x-1)]]
           'U' -> [(x,y') | y' <- [(y+1)..(y+n)]]
           'D' -> reverse [(x,y') | y' <- [(y-n)..(y-1)]]
+          _ -> error "bad move"
   in concat . snd $ mapAccumL
        (\p m -> let l = doMove p m in (last l, l))
        (0,0) moves
@@ -324,6 +348,7 @@ findNums xs m n =
                  _ -> findNums xs m (n + 1)
 
 isNums :: [Int] -> Int -> Int -> Bool
+isNums [] _ _ = False
 isNums (x:xs) m n =
   let xs' = x : m : n : (tail $ tail xs)
   in (compute xs' 0)!!0 == 19690720
@@ -341,6 +366,7 @@ compute xs i =
     99 -> xs
     1 -> doOp (+)
     2 -> doOp (*)
+    _ -> error "bad code"
   where
     doOp b = compute (setAt
                        (xs!!(i+3))
