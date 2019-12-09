@@ -4,12 +4,16 @@ module Main where
 
 import System.Environment (getArgs)
 import Data.Digits (digits)
-import Data.Graph (graphFromEdges, Vertex)
+import Data.Graph (dfs, graphFromEdges, Vertex)
+--import Data.Graph.UGraph (UGraph)
+--import Data.Graph.Types (Edge)
+import Data.Array.IArray
 import Data.Maybe (fromJust, mapMaybe)
 import Data.List (elemIndex, find, group, mapAccumL, foldl')
-import Data.List.Index (setAt, indexed, deleteAt, ifoldl')
+import Data.List.Index (setAt, indexed, deleteAt, ifoldl', ifind)
 import Data.List.Split (splitOn)
 import Data.Set (intersection, fromList, toList)
+import Data.Tree (Tree(..))
 
 import Debug.Trace
 
@@ -61,6 +65,41 @@ fixLeaves acc (p@(n, k, as):xs) ys =
             [] as
   in fixLeaves (p : map (\a -> (a, a, [])) as' ++ acc) xs ys
 
+fixAdjacencies
+  :: [(String, String, [String])]
+  -> [(String, String, [String])]
+  -> [(String, String, [String])]
+fixAdjacencies acc [] = acc
+fixAdjacencies acc (p@(n, k, as):xs) =
+  let
+    fst' (a,_,_) = a; snd' (_,b,_) = b; thd (_,_,c) = c
+    f a = let (i, x) = fromJust $ ifind (\_ s -> fst' s == a) acc
+              u = (fst' x, snd' x, n : thd x)
+          in (i, u)
+    (is, ys) = unzip $ map f as
+    acc' = fst $ ifoldl'
+           (\(zs, j) i a -> if i `elem` is
+                            then (setAt i (ys!!j) zs, j+1)
+                            else (zs, j)) (acc, 0) acc
+  in fixAdjacencies acc' xs
+
+
+d6p2 :: IO ()
+d6p2 = do
+  input <- lines <$> readFile "input6"
+  let is = fixDups [] $ map makeAdjacencyList input
+      is' = fixLeaves [] is is
+      is'' = fixAdjacencies is' is'
+      (g, nfv, vfk) = graphFromEdges is''
+      t = head $ dfs g [fromJust $ vfk "YOU"]
+      san = fromJust $ vfk "SAN"
+      findSanta :: [(Int, Int)] -> Tree Int -> [(Int, Int)]
+      findSanta acc (Node a l) =
+        if elem san $ map rootLabel l
+        then acc
+        else concatMap (\b -> findSanta ((a, rootLabel b) : acc) b) l
+  putStrLn $ show $ (length $ findSanta [] t) - 1
+
 d6p1 :: IO ()
 d6p1 = do
   input <- lines <$> readFile "input6"
@@ -73,7 +112,6 @@ d6p1 = do
         let (_,_,as) = fn v
             adjs = map (sumOrbits (d+1)) $ mapMaybe fv as
         in d + sum adjs
-  --let edges = makeEdges input
   putStrLn $ show $ sumOrbits 0 $ fromJust $ fv "COM"
 
 d5p2 :: IO ()

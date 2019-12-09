@@ -22,4 +22,5 @@ executable aoc2019
                      , ilist
                      , containers
                      , digits
+                     , array
                      , text
