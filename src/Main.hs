@@ -5,11 +5,9 @@ module Main where
 import System.Environment (getArgs)
 import Data.Digits (digits)
 import Data.Graph (dfs, graphFromEdges, Vertex)
---import Data.Graph.UGraph (UGraph)
---import Data.Graph.Types (Edge)
-import Data.Array.IArray
 import Data.Maybe (fromJust, mapMaybe)
-import Data.List (elemIndex, find, group, mapAccumL, foldl')
+import Data.List (elemIndex, find, group, mapAccumL, foldl', foldl1'
+                 , permutations)
 import Data.List.Index (setAt, indexed, deleteAt, ifoldl', ifind)
 import Data.List.Split (splitOn)
 import Data.Set (intersection, fromList, toList)
@@ -32,6 +30,79 @@ main = do
     "d5p1" -> d5p1
     "d5p2" -> d5p2
     "d6p1" -> d6p1
+    "d7p1" -> d7p1
+    "d7p2" -> d7p2
+
+d7p2 :: IO ()
+d7p2 = do
+  is <- map read <$> splitOn "," <$> readFile "input7" :: IO [Int]
+  let ampA i j k l m = compute'' 0 (i:0:ampE i j k l m) [] is
+      ampD i j k l m = compute'' 0 (l:ampC i j k l m) [] is
+      ampC i j k l m = compute'' 0 (k:ampB i j k l m) [] is
+      ampB i j k l m = compute'' 0 (j:ampA i j k l m) [] is
+      ampE i j k l m = compute'' 0 (m:ampD i j k l m) [] is
+  putStrLn . show . maximum $ map (\(a:b:c:d:e:[]) -> ampE a b c d e)
+    $ permutations [5..9]
+
+d7p1 :: IO ()
+d7p1 = do
+  is <- map read <$> splitOn "," <$> readFile "input7" :: IO [Int]
+  let ampA i = compute'' 0 (i:repeat 0) [] is
+      ampB i j = compute'' 0 (i:ampA j) [] is
+      ampC i j k = compute'' 0 (i:ampB j k) [] is
+      ampD i j k l = compute'' 0 (i:ampC j k l) [] is
+      ampE (i, j, k, l, m) = compute'' 0 (i:ampD j k l m) [] is
+  putStrLn . show . maximum $ map (head . ampE)
+    $ map (\[a,b,c,d,e] -> (a,b,c,d,e)) $ permutations [0..4]
+
+d5p1' :: IO ()
+d5p1' = do
+  is <- map read <$> splitOn "," <$> readFile "input5" :: IO [Int]
+  let computed = compute'' 0 [1] [] is
+  putStrLn $ show computed
+
+d5p2' :: IO ()
+d5p2' = do
+  is <- map read <$> splitOn "," <$> readFile "input5" :: IO [Int]
+  let computed = compute'' 0 [5] [] is
+  putStrLn $ show computed
+
+compute'' :: Int -> [Int] -> [Int] -> [Int] -> [Int]
+compute'' i input output code =
+  let ds = fillOp $ code!!i
+      getv m p = if m == 0 then code!!p else p
+      doOp b v1 v2 v3 = setAt v3 (v1 `b` v2) code
+      doInput i' = setAt i' (head input) code
+  in case ds of
+    (_:_:_:9:9:[]) -> reverse output
+    (_:m2:m1:0:1:[]) -> compute'' (i+4) input output
+                        $ doOp (+) (getv m1 $ code!!(i+1))
+                        (getv m2 $ code!!(i+2))
+                        (code!!(i+3))
+    (_:m2:m1:0:2:[]) -> compute'' (i+4) input output
+                        $ doOp (*) (getv m1 $ code!!(i+1))
+                        (getv m2 $ code!!(i+2))
+                        (code!!(i+3))
+    (_:_:m1:0:3:[]) ->
+      compute'' (i+2) (tail input) output $ doInput $ code!!(i+1)
+    (_:_:m1:0:4:[]) ->
+      compute'' (i+2) input ((getv m1 $ code!!(i+1)) : output) code
+    (_:m2:m1:0:5:[]) ->
+      let b = (getv m1 $ code!!(i+1)) /= 0
+      in compute''
+         (if b then getv m2 $ code!!(i+2) else i+3) input output code
+    (_:m2:m1:0:6:[]) ->
+      let b = (getv m1 $ code!!(i+1)) == 0
+      in compute''
+         (if b then getv m2 $ code!!(i+2) else i+3) input output code
+    (_:m2:m1:0:7:[]) ->
+      let b = (getv m1 $ code!!(i+1)) < (getv m2 $ code!!(i+2))
+      in compute'' (i+4) input output
+         $ setAt (code!!(i+3)) (if b then 1 else 0) code
+    (_:m2:m1:0:8:[]) ->
+      let b = (getv m1 $ code!!(i+1)) == (getv m2 $ code!!(i+2))
+      in compute'' (i+4) input output
+         $ setAt (code!!(i+3)) (if b then 1 else 0) code
 
 makeAdjacencyList :: String -> (String, String, [String])
 makeAdjacencyList s =
@@ -138,7 +209,7 @@ compute' i iocode = do
       doOp b v1 v2 v3 = return $ setAt v3 (v1 `b` v2) code
       doInput i' = do
         putStrLn "Provide input:"
-        v <- read <$> getLine :: IO Int
+        v <- read <$> getLine
         return $ setAt i' v code
       doOutput v = do
         putStrLn $ "Output: " ++ show v
@@ -153,8 +224,10 @@ compute' i iocode = do
                         $ doOp (*) (getValue m1 $ code!!(i+1))
                         (getValue m2 $ code!!(i+2))
                         (code!!(i+3))
-    (_:_:m1:0:3:[]) -> compute' (i+2) $ doInput $ code!!(i+1)
-    (_:_:m1:0:4:[]) -> compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
+    (_:_:m1:0:3:[]) ->
+      compute' (i+2) $ doInput $ code!!(i+1)
+    (_:_:m1:0:4:[]) ->
+      compute' (i+2) $ doOutput $ getValue m1 $ code!!(i+1)
     (_:m2:m1:0:5:[]) ->
       let b = (getValue m1 $ code!!(i+1)) /= 0
       in compute' (if b then getValue m2 $ code!!(i+2) else i+3)
