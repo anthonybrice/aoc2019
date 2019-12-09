@@ -1,10 +1,10 @@
 module Main where
 
-import Data.Char (digitToInt)
+import Data.Char (digitToInt, intToDigit)
 import Data.Digits (digits)
 import Data.Graph (dfs, graphFromEdges, Vertex)
 import Data.List (elemIndex, group, mapAccumL, foldl'
-                 , permutations)
+                 , permutations, transpose)
 import Data.List.Index (setAt, ifoldl', ifind)
 import Data.List.Split (splitOn, chunksOf)
 import Data.Maybe (fromJust, mapMaybe)
@@ -12,7 +12,7 @@ import Data.Set (intersection, fromList, toList)
 import Data.Tree (Tree(..))
 import System.Environment (getArgs)
 
-import Debug.Trace
+--import Debug.Trace
 
 main :: IO ()
 main = do
@@ -37,7 +37,12 @@ main = do
 
 d8p2 :: IO ()
 d8p2 = do
-  undefined
+  is <- map digitToInt <$> readFile "input8"
+  let (w,h) = (25,6)
+      is' = transpose $ chunksOf (w*h) is
+      getPixel (x:xs) = if x == 0 || x == 1 then x else getPixel xs
+      im = chunksOf 25 $ map ((\x -> if x == 1 then 'X' else ' ') . getPixel) is'
+  mapM_ putStrLn im
 
 d8p1 :: IO ()
 d8p1 = do
