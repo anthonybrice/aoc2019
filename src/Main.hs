@@ -1,9 +1,9 @@
 module Main where
 
-import Data.Char (digitToInt, intToDigit)
+import Data.Char (digitToInt)
 import Data.Digits (digits)
 import Data.Graph (dfs, graphFromEdges, Vertex)
-import Data.List (elemIndex, group, mapAccumL, foldl'
+import Data.List (elemIndex, genericIndex, group, mapAccumL, foldl'
                  , permutations, transpose)
 import Data.List.Index (setAt, ifoldl', ifind)
 import Data.List.Split (splitOn, chunksOf)
@@ -12,7 +12,7 @@ import Data.Set (intersection, fromList, toList)
 import Data.Tree (Tree(..))
 import System.Environment (getArgs)
 
---import Debug.Trace
+import Debug.Trace
 
 main :: IO ()
 main = do
@@ -33,13 +33,86 @@ main = do
     "d7p2" -> d7p2
     "d8p1" -> d8p1
     "d8p2" -> d8p2
+    "d9p1" -> d9p1
+    "d9p2" -> d9p2
     _ -> error "bad arg"
+
+d9p2 :: IO ()
+d9p2 = do
+  is <- map read <$> splitOn "," <$> readFile "input9"
+  let c = compute9 0 0 [2] [] (is ++ repeat 0)
+  putStrLn $ show c
+
+
+d9p1 :: IO ()
+d9p1 = do
+  is <- map read <$> splitOn "," <$> readFile "input9"
+  let c = compute9 0 0 [1] [] (is ++ repeat 0)
+  putStrLn $ show c
+
+(!^) :: [a] -> Integer -> a
+(!^) = genericIndex
+infixl 9 !^
+
+compute9
+  :: Integer
+  -> Integer
+  -> [Integer]
+  -> [Integer]
+  -> [Integer]
+  -> [Integer]
+compute9 i r input output code =
+  let ds = fillOp $ code!^i
+      getv m p = case m of
+        0 -> code!^p
+        1 -> p
+        2 -> code!^(r+p)
+        _ -> error "bad mode"
+      getv' m p = case m of
+        0 -> p
+        2 -> r+p
+        _ -> error "bad mode"
+      doOp b v1 v2 v3 = setAt (fromInteger v3) (v1 `b` v2) code
+  in case ds of
+    (_:_:_:9:9:[]) -> reverse output
+    (m3:m2:m1:0:1:[]) ->
+      compute9 (i+4) r input output $ doOp (+) (getv m1 $ code!^(i+1))
+      (getv m2 $ code!^(i+2)) (getv' m3 $ code!^(i+3))
+    (m3:m2:m1:0:2:[]) ->
+      compute9 (i+4) r input output $ doOp (*) (getv m1 $ code!^(i+1))
+      (getv m2 $ code!^(i+2)) (getv' m3 $ code!^(i+3))
+    (_:_:m1:0:3:[]) ->
+      let doInput i' = setAt (fromInteger i') (head input) code
+      in compute9 (i+2) r (tail input) output
+         $ doInput $ getv' m1 $ code!^(i+1)
+    (_:_:m1:0:4:[]) ->
+      compute9 (i+2) r input ((getv m1 $ code!^(i+1)) : output) code
+    (_:m2:m1:0:5:[]) ->
+      let b = (getv m1 $ code!^(i+1)) /= 0
+      in compute9
+         (if b then getv m2 $ code!^(i+2) else i+3) r input output code
+    (_:m2:m1:0:6:[]) ->
+      let b = (getv m1 $ code!^(i+1)) == 0
+      in compute9
+         (if b then getv m2 $ code!^(i+2) else i+3) r input output code
+    (m3:m2:m1:0:7:[]) ->
+      let b = (getv m1 $ code!^(i+1)) < (getv m2 $ code!^(i+2))
+      in compute9 (i+4) r input output
+         $ setAt (fromInteger $ getv' m3 $ code!^(i+3)) (if b then 1 else 0) code
+    (m3:m2:m1:0:8:[]) ->
+      let b = (getv m1 $ code!^(i+1)) == (getv m2 $ code!^(i+2))
+      in compute9 (i+4) r input output
+         $ setAt (fromInteger $ getv' m3 $ code!^(i+3)) (if b then 1 else 0) code
+    (_:_:m1:0:9:[]) ->
+      compute9 (i+2) (r+getv m1 (code!^(i+1))) input output code
+    _ -> error "bad code"
 
 d8p2 :: IO ()
 d8p2 = do
   is <- map digitToInt <$> readFile "input8"
   let (w,h) = (25,6)
       is' = transpose $ chunksOf (w*h) is
+      getPixel [] = error "reached end with no pixel"
       getPixel (x:xs) = if x == 0 || x == 1 then x else getPixel xs
       im = chunksOf 25 $ map ((\x -> if x == 1 then 'X' else ' ') . getPixel) is'
   mapM_ putStrLn im
@@ -271,7 +344,7 @@ compute' i iocode = do
          return $ setAt (code!!(i+3)) (if b then 1 else 0) code
     _ -> error "bad code"
 
-fillOp :: Int -> [Int]
+fillOp :: Integral a => a -> [a]
 fillOp x =
   let pad y = if length y < 5 then pad (0:y) else y
   in pad $ digits 10 x
