@@ -12,7 +12,7 @@ import Data.Set (intersection, fromList, toList)
 import Data.Tree (Tree(..))
 import System.Environment (getArgs)
 
-import Debug.Trace
+--import Debug.Trace
 
 main :: IO ()
 main = do
@@ -35,14 +35,54 @@ main = do
     "d8p2" -> d8p2
     "d9p1" -> d9p1
     "d9p2" -> d9p2
+    "d10p1" -> d10p1
+    "d10p2" -> d10p2
     _ -> error "bad arg"
+
+d10p2 :: IO ()
+d10p2 = do
+  undefined
+
+data Point a = Point a a deriving (Eq, Show)
+
+angle :: (RealFrac a, RealFloat a) => Point a -> Point a -> a
+angle (Point x y) (Point x' y') = atan2 (y - y') (x - x')
+
+isVisible :: (RealFrac a, RealFloat a) => Point a -> Point a -> [a] -> Bool
+isVisible p p' xs
+  | p == p' = False
+  | otherwise = not $ angle p p' `elem` xs
+
+numVisible :: (RealFrac a, RealFloat a)
+  => [a] -> Point a -> [[Space]] -> [Point a] -> Int
+numVisible acc _ _ [] = length acc
+numVisible acc m sp (n@(Point x y):ns) =
+  if sp!!round y!!round x == Asteroid && isVisible m n acc
+  then numVisible (angle m n : acc) m sp ns
+  else numVisible acc m sp ns
+
+data Space = Asteroid | Space deriving (Show, Eq)
+
+space :: Char -> Space
+space '#' = Asteroid
+space '.' = Space
+space _ = Space
+
+d10p1 :: IO ()
+d10p1 = do
+  m <- map (map space) <$> (init . splitOn "\n") <$> readFile "input10"
+  let ns = map (\(a,b) -> Point (fromIntegral a) (fromIntegral b))
+           $ (,) <$> [0..length m - 1] <*> [0..length (head m) - 1]
+      allNums = map (\p@(Point x y) ->
+                 if m!!round y!!round x == Asteroid
+                 then numVisible [] p m ns else -1) ns
+  putStrLn $ show $ maximum allNums
 
 d9p2 :: IO ()
 d9p2 = do
   is <- map read <$> splitOn "," <$> readFile "input9"
   let c = compute9 0 0 [2] [] (is ++ repeat 0)
   putStrLn $ show c
-
 
 d9p1 :: IO ()
 d9p1 = do
