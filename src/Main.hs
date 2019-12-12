@@ -4,7 +4,7 @@ import Data.Char (digitToInt)
 import Data.Digits (digits)
 import Data.Graph (dfs, graphFromEdges, Vertex)
 import Data.List (elemIndex, genericIndex, group, mapAccumL, foldl'
-                 , permutations, transpose)
+                 , permutations, transpose, elemIndex, sortBy)
 import Data.List.Index (setAt, ifoldl', ifind)
 import Data.List.Split (splitOn, chunksOf)
 import Data.Maybe (fromJust, mapMaybe)
@@ -41,12 +41,47 @@ main = do
 
 d10p2 :: IO ()
 d10p2 = do
-  undefined
+  m <- map (map space) <$> init . splitOn "\n" <$> readFile "input10"
+  let ns = map (\(a,b) -> Point (fromIntegral b) (fromIntegral a))
+           $ (,) <$> [0..length m - 1] <*> [0..length (head m) - 1]
+      vis = sortBy (\(_, a) (_, b) -> compare b a)
+            $ allVisible [] (Point 22 28) m ns
+  putStrLn $ show $ vis!!199
+
+putPossiblyVisible :: (RealFrac a, RealFloat a) =>
+  Point a -> Point a -> [(Point a, a)] -> [(Point a, a)]
+putPossiblyVisible p@(Point x1 y1) p'@(Point x2 y2) xs
+  | p == p' = xs
+  | otherwise =
+    if angle p p' `elem` map snd xs
+    then let i = fromJust $ angle p p' `elemIndex` map snd xs
+             (Point x3 y3) = fst $ xs!!i
+             d1 = sqrt $ (x2-x1)**2 + (y2-y1)**2
+             d2 = sqrt $ (x3-x1)**2 + (y3-y1)**2
+         in if d1 < d2
+            then setAt i (p', angle p p') xs
+            else xs
+    else (p', angle p p'):xs
+
+allVisible :: (RealFrac a, RealFloat a) =>
+  [(Point a, a)] -> Point a -> [[Space]] -> [Point a] -> [(Point a, a)]
+allVisible acc _ _ [] = acc
+allVisible acc m sp (n@(Point x y):ns) =
+  if sp!!round y!!round x == Asteroid -- && isVisible m n (map snd acc)
+  then allVisible (putPossiblyVisible m n acc) m sp ns
+  else allVisible acc m sp ns
+
+vaporize :: (RealFrac a, RealFloat a) => [[Space]] -> Point a -> [[Space]]
+vaporize m (Point x y) =
+  let r = setAt (round x) Space (m!!round y)
+  in setAt (round y) r m
 
 data Point a = Point a a deriving (Eq, Show)
 
 angle :: (RealFrac a, RealFloat a) => Point a -> Point a -> a
-angle (Point x y) (Point x' y') = atan2 (y - y') (x - x')
+angle (Point x y) (Point x' y') =
+  let a = atan2 (x - x') (y - y')
+  in if a <= 0 then a + 2*pi else a
 
 isVisible :: (RealFrac a, RealFloat a) => Point a -> Point a -> [a] -> Bool
 isVisible p p' xs
